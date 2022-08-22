@@ -220,9 +220,7 @@ class Interval:
                     try:
                         start = fpur.mul_down(x.minimum, y.minimum)
                     except OverflowError:
-                        continue
-                    if isinf(start):
-                        continue
+                        start = inf
                     try:
                         stop = fpur.mul_up(x.maximum, y.maximum)
                     except OverflowError:
@@ -235,9 +233,7 @@ class Interval:
                     try:
                         stop = fpur.mul_up(x.minimum, y.maximum)
                     except OverflowError:
-                        continue
-                    if isinf(stop):
-                        continue
+                        stop = -inf
                     try:
                         start = fpur.mul_down(x.maximum, y.minimum)
                     except OverflowError:
@@ -253,9 +249,7 @@ class Interval:
                     try:
                         start = fpur.mul_down(x.maximum, y.maximum)
                     except OverflowError:
-                        continue
-                    if isinf(start):
-                        continue
+                        start = inf
                     try:
                         stop = fpur.mul_up(x.minimum, y.minimum)
                     except OverflowError:
@@ -268,9 +262,7 @@ class Interval:
                     try:
                         stop = fpur.mul_up(x.maximum, y.minimum)
                     except OverflowError:
-                        continue
-                    if isinf(stop):
-                        continue
+                        stop = -inf
                     try:
                         start = fpur.mul_down(x.minimum, y.maximum)
                     except OverflowError:
@@ -505,9 +497,7 @@ class Interval:
                     try:
                         start = fpur.div_down(x.minimum, y.maximum)
                     except (OverflowError, ZeroDivisionError):
-                        continue
-                    if isinf(start):
-                        continue
+                        start = inf
                     try:
                         stop = fpur.div_up(x.maximum, y.minimum)
                     except (OverflowError, ZeroDivisionError):
@@ -520,7 +510,7 @@ class Interval:
                     try:
                         stop = fpur.div_up(x.minimum, y.minimum)
                     except (OverflowError, ZeroDivisionError):
-                        continue
+                        stop = -inf
                     try:
                         start = fpur.div_down(x.maximum, y.maximum)
                     except (OverflowError, ZeroDivisionError):
@@ -536,7 +526,7 @@ class Interval:
                     try:
                         start = fpur.div_down(x.maximum, y.minimum)
                     except (OverflowError, ZeroDivisionError):
-                        continue
+                        start = inf
                     try:
                         stop = fpur.div_up(x.minimum, y.maximum)
                     except (OverflowError, ZeroDivisionError):
@@ -549,7 +539,7 @@ class Interval:
                     try:
                         stop = fpur.div_up(x.maximum, y.maximum)
                     except (OverflowError, ZeroDivisionError):
-                        continue
+                        stop = -inf
                     try:
                         start = fpur.div_down(x.minimum, y.minimum)
                     except (OverflowError, ZeroDivisionError):
