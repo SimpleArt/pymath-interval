@@ -1,16 +1,19 @@
 from functools import lru_cache
-from math import fsum, inf, isinf, isnan
-from typing import Callable, Iterator, Optional, SupportsFloat, Tuple
+from math import fsum, inf, isinf, isnan, nextafter
+from typing import Callable, Iterator, List, Optional, SupportsFloat, Tuple
 
 from . import imath
 from ._src.interval import Interval
 
-def _mean(interval: Interval) -> float:
-    assert len(interval._endpoints) == 2
-    if 0 in interval:
-        return 0.5 * (interval.maximum + interval.minimum)
+def _fmean(x: float, y: float) -> float:
+    assert x <= y
+    if x <= 0 <= y:
+        return 0.5 * (x + y)
     else:
-        return interval.minimum + 0.5 * (interval.maximum - interval.minimum)
+        return x + 0.5 * (y - x)
+
+def _imean(interval: Interval) -> float:
+    return _fmean(*interval._endpoints)
 
 def _split(interval: Interval) -> Tuple[Interval, Interval]:
     assert len(interval._endpoints) == 2
@@ -26,14 +29,14 @@ def _split(interval: Interval) -> Tuple[Interval, Interval]:
         else:
             return interval[:interval.minimum * 2 + 1], interval[interval.minimum * 2 + 1:]
     else:
-        midpoint = _mean(interval)
+        midpoint = _imean(interval)
         return interval[:midpoint], interval[midpoint:]
 
 def partition(
     integral: Callable[[Interval], Interval],
     bounds: Interval,
     error: float = 0.1,
-) -> Iterator[Interval]:
+) -> List[Interval]:
     if not callable(integral):
         raise TypeError(f"expected callable integral, got {integral!r}")
     elif not isinstance(bounds, Interval):
@@ -58,22 +61,34 @@ def partition(
             return result
         split_size = max(p.size for p in partitions.values())
         split_size = 0.125 * min(split_size, error)
-        split_partitions = [
-            k
+        split_partitions = {
+            k: v
             for k, v in partitions.items()
             if v.size > split_size
-        ]
+        }
         while split_partitions:
-            p = split_partitions.pop()
-            left, right = _split(p)
-            if left != p != right:
-                del partitions[p]
-                for p in (left, right):
-                    partitions[p] = integral(p)
-                    if 8 * partitions[p].size > split_size:
-                        split_partitions.append(p)
+            k, v = split_partitions.popitem()
+            p = [*k._endpoints]
+            if nextafter(*p) == p[1]:
+                extremes[k] = partitions.pop(k)
+                continue
+            elif isinf(p[0]) or isinf(p[1]):
+                left, right = _split(k)
+                p = [*left._endpoints, right.maximum]
             else:
-                extremes[p] = partitions.pop(p)
+                if isinf(v.size):
+                    n = round((v / 2).size / (split_size / 2)).bit_length()
+                else:
+                    n = round(v.size / split_size).bit_length()
+                for _ in range(n // 3 + 1):
+                    p.extend(_fmean(p[i - 1], p[i]) for i in range(1, len(p)))
+                    p.sort()
+            del partitions[k]
+            for i in range(1, len(p)):
+                k = Interval((p[i - 1], p[i]))
+                v = partitions[k] = integral(k)
+                if v.size > split_size:
+                    split_partitions[k] = v
 
 def integrate(
     integral: Callable[[Interval], Interval],
@@ -99,16 +114,16 @@ def integrate(
         for p in partition(integral, bounds, error)
     }
     if f is None:
-        return imath.fsum(partitions.values()), fsum(map(_mean, partitions.values()))
+        return imath.fsum(partitions.values()), fsum(map(_imean, partitions.values()))
     else:
         return imath.fsum(partitions.values()), fsum(
-            _mean(v)
+            _imean(v)
                 if
             isinf(k.size)
             or sum(1 for _ in v.sub_intervals) > 2
             or isinf(v.minimum)
             or isinf(v.maximum)
                 else
-            (f(v & k.minimum) + 4 * f(v & _mean(k)) + f(v & k.maximum)) / 6
+            _imean(f(k & k.minimum) + 4 * f(k & _imean(k)) + f(k & k.maximum)) / 6
             for k, v in partitions.items()
         )
