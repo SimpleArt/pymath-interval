@@ -570,7 +570,7 @@ class Interval:
                 iterator = reversed(self._endpoints)
                 return type(self)(*[
                     (fpur.div_down(upper, L), fpur.div_up(lower, U))
-                    for lower, upper in zip(iterator, iterator)
+                    for upper, lower in zip(iterator, iterator)
                     for L in [other.minimum if upper < 0.0 else other.maximum]
                     for U in [other.maximum if lower < 0.0 else other.minimum]
                 ])
