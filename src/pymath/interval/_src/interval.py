@@ -144,6 +144,8 @@ class Interval:
         if len(self._endpoints) == 0:
             return "interval[()]"
         else:
+            if specifier[-1:] not in "bcdeEfFgGnosxX%":
+                specifier += "g"
             iterator = iter(self._endpoints)
             bounds = ", ".join([
                 ":".join([
