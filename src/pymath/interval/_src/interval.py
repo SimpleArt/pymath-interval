@@ -106,6 +106,12 @@ class Interval:
     def __as_interval__(self: Self) -> Interval:
         return self
 
+    def __call__(self: Self, /, *args: Any) -> Self:
+        result = self[()]
+        for arg in args:
+            result = (arg * interval[1:1]) | result
+        return result
+
     def __contains__(self: Self, other: Any, /) -> bool:
         if isinstance(other, SupportsIndex):
             other = operator.index(other)
