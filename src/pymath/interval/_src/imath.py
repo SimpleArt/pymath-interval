@@ -970,6 +970,42 @@ def dist(p: Iterable[Union[Interval, RealLike]], q: Iterable[Union[Interval, Rea
             intervals.append((L, U))
     return sqrt(Interval(*intervals))
 
+def dot(x: Iterable[Union[Interval, RealLike]], y: Iterable[Union[Interval, RealLike]]) -> Interval:
+    with localcontext() as ctx:
+        ctx.prec = 50
+        intervals = [([], [])]
+        for xi, yi in zip(x, y):
+            if isinstance(xi, get_args(RealLike)):
+                if isinstance(xi, SupportsIndex):
+                    xi = operator.index(xi)
+                xi = Interval(float_split(xi))
+            elif not isinstance(xi, Interval):
+                raise TypeError(NOT_INTERVAL.format(repr(xi)))
+            if isinstance(yi, get_args(RealLike)):
+                if isinstance(yi, SupportsIndex):
+                    yi = operator.index(yi)
+                yi = Interval(float_split(yi))
+            elif not isinstance(yi, Interval):
+                raise TypeError(NOT_INTERVAL.format(repr(yi)))
+            lower = []
+            upper = []
+            for xii in xi[:0].sub_intervals:
+                for yii in yi[:0].sub_intervals:
+                    lower.append(Decimal(xii.maximum) * Decimal(yii.maximum))
+                    upper.append(Decimal(xii.minimum) * Decimal(yii.minimum))
+                for yii in yi[0:].sub_intervals:
+                    lower.append(Decimal(xii.minimum) * Decimal(yii.maximum))
+                    upper.append(Decimal(xii.maximum) * Decimal(yii.minimum))
+            for xii in xi[0:].sub_intervals:
+                for yii in yi[:0].sub_intervals:
+                    lower.append(Decimal(xii.maximum) * Decimal(yii.minimum))
+                    upper.append(Decimal(xii.minimum) * Decimal(yii.maximum))
+                for yii in yi[0:].sub_intervals:
+                    lower.append(Decimal(xii.minimum) * Decimal(yii.minimum))
+                    upper.append(Decimal(xii.maximum) * Decimal(yii.maximum))
+            intervals[:] = [(i[0] + L, i[1] + U) for i in intervals for L, U in zip(lower, upper)]
+        return Interval(*intervals)
+
 def erf_small_precise(x: float) -> Decimal:
     assert abs(x) <= 1.5
     with localcontext() as ctx:
