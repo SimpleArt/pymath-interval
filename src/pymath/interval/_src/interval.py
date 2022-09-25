@@ -324,7 +324,7 @@ class Interval:
                 *[(x.minimum, x.maximum) for x in other.sub_intervals],
             )
         elif isinstance(other, get_args(RealLike)):
-            if isinstance(other, SupportsFloat):
+            if isinstance(other, SupportsIndex):
                 other = operator.index(other)
             return type(self)(*[(x.minimum, x.maximum) for x in self.sub_intervals], fpur.float_split(other))
         else:
