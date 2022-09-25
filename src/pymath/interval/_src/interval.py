@@ -3,9 +3,9 @@ import operator
 from decimal import Decimal
 from heapq import merge
 from math import ceil, floor, inf, isinf, isnan
-from typing import Any, Iterable, Iterator, Optional, SupportsFloat
-from typing import SupportsIndex, TypeVar, Union, get_args
-from typing import Tuple as tuple
+from typing import Any, Iterable, Iterator, Optional, Protocol
+from typing import SupportsFloat, SupportsIndex, TypeVar, Union
+from typing import get_args, overload, Tuple as tuple
 
 from . import fpu_rounding as fpur
 from .typing import RealLike, SupportsRichFloat
@@ -13,8 +13,19 @@ from .typing import RealLike, SupportsRichFloat
 __all__ = ["Interval", "interval"]
 
 Self = TypeVar("Self", bound="Interval")
+SupportsSelf = TypeVar("SupportsSelf", bound="SupportsInterval")
 
 NOT_REAL = "could not interpret {} as a real value"
+
+
+class SupportsInterval(Protocol):
+
+    def __or__(self: SupportsSelf, other: Interval) -> SupportsSelf: ...
+
+    def __ror__(
+        self: SupportsSelf,
+        other: Union[Interval, RealLike, SupportsSelf],
+    ) -> SupportsSelf: ...
 
 
 class Interval:
@@ -106,7 +117,22 @@ class Interval:
     def __as_interval__(self: Self) -> Interval:
         return self
 
-    def __call__(self: Self, /, *args: Any) -> Self:
+    @overload
+    def __call__(
+        self: Self,
+        /,
+        *args: Union[Interval, RealLike],
+    ) -> Self: ...
+
+    @overload
+    def __call__(
+        self: Self,
+        arg: SupportsSelf,
+        /,
+        *args: Union[Interval, RealLike, SupportsSelf],
+    ) -> SupportsSelf: ...
+
+    def __call__(self, /, *args):
         result = self[()]
         for arg in args:
             result = arg | result

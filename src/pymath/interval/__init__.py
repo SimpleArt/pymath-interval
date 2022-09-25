@@ -1,4 +1,4 @@
 from . import imath, integral, ioperator, root_all
 from ._src.interval import Interval, interval
 
-__version__ = "0.3.1"
+__version__ = "0.3.2"
