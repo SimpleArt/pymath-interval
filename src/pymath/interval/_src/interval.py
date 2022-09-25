@@ -109,7 +109,7 @@ class Interval:
     def __call__(self: Self, /, *args: Any) -> Self:
         result = self[()]
         for arg in args:
-            result = (arg * interval[1:1]) | result
+            result = arg | result
         return result
 
     def __contains__(self: Self, other: Any, /) -> bool:
