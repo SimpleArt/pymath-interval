@@ -1,5 +1,6 @@
 from __future__ import annotations
 import operator
+import re
 from decimal import Decimal
 from heapq import merge
 from math import ceil, floor, inf, isinf, isnan
@@ -16,6 +17,17 @@ Self = TypeVar("Self", bound="Interval")
 SupportsSelf = TypeVar("SupportsSelf", bound="SupportsInterval")
 
 NOT_REAL = "could not interpret {} as a real value"
+
+FSTRING_FORMATTER = re.compile(
+    "(?P<fill>.*?)"
+    "(?P<align>[<>=^]?)"
+    "(?P<sign>[+ -]?)"
+    "(?P<alternate>[#]?)"
+    "(?P<width>[0-9]*)"
+    "(?P<group>[_,]?)"
+    "(?P<precision>(?:[.][0-9]+)?)"
+    "(?P<dtype>[bcdeEfFgGnosxX%]?)"
+)
 
 
 class SupportsInterval(Protocol):
@@ -173,10 +185,19 @@ class Interval:
             return NotImplemented
 
     def __format__(self: Self, specifier: str, /) -> str:
+        match = FSTRING_FORMATTER.fullmatch(specifier)
+        if match is None:
+            # Invalid specifier, raise an error.
+            f"{0.0:{specifier}}"
+            raise TypeError(f"invalid specifier, got {specifier!r}")
+        fill, align, sign, alternate, width, group, precision, dtype = match.groups()
         if len(self._endpoints) == 0:
             return "interval()"
-        if not specifier.endswith((*"bcdeEfFgGnosxX%",)):
-            specifier += "g"
+        if dtype == "":
+            dtype = "g"
+            if precision == "":
+                precision = ".17"
+        specifier = f"{fill}{align}{sign}{alternate}{width}{group}{precision}{dtype}"
         iterator = iter(self._endpoints)
         if self.size == 0:
             points = ", ".join([f"{U:{specifier}}" for _, U in zip(iterator, iterator)])
