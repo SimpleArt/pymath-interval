@@ -174,19 +174,21 @@ class Interval:
 
     def __format__(self: Self, specifier: str, /) -> str:
         if len(self._endpoints) == 0:
-            return "interval[()]"
-        else:
-            if not specifier.endswith((*"bcdeEfFgGnosxX%",)):
-                specifier += "g"
-            iterator = iter(self._endpoints)
-            bounds = ", ".join([
-                ":".join([
-                    f"{-0.0:{specifier}}" if lower == 0.0 else "" if isinf(lower) and lower < 0.0 else f"{lower:{specifier}}",
-                    f"{0.0:{specifier}}" if upper == 0.0 else "" if isinf(upper) and upper > 0.0 else f"{upper:{specifier}}",
-                ])
-                for lower, upper in zip(iterator, iterator)
+            return "interval()"
+        if not specifier.endswith((*"bcdeEfFgGnosxX%",)):
+            specifier += "g"
+        iterator = iter(self._endpoints)
+        if self.size == 0:
+            points = ", ".join([f"{U:{specifier}}" for _, U in zip(iterator, iterator)])
+            return f"interval({points})"
+        bounds = ", ".join([
+            ":".join([
+                f"{-0.0:{specifier}}" if lower == 0.0 else "" if isinf(lower) and lower < 0.0 else f"{lower:{specifier}}",
+                f"{0.0:{specifier}}" if upper == 0.0 else "" if isinf(upper) and upper > 0.0 else f"{upper:{specifier}}",
             ])
-            return f"interval[{bounds}]"
+            for lower, upper in zip(iterator, iterator)
+        ])
+        return f"interval[{bounds}]"
 
     @classmethod
     def __fsum__(cls: Type[Self], intervals: list[Interval]) -> Self:
