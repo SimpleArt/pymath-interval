@@ -12,7 +12,7 @@ from .typing import RealLike, SupportsRichFloat
 
 __all__ = ["Interval", "interval"]
 
-Self = TypeVar("Self", bound="interval")
+Self = TypeVar("Self", bound="Interval")
 
 NOT_REAL = "could not interpret {} as a real value"
 
