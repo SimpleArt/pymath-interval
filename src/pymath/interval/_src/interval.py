@@ -747,7 +747,11 @@ class Interval:
 
     @property
     def size(self: Self, /) -> float:
-        return sum(interval.maximum - interval.minimum for interval in self.sub_intervals)
+        return sum(
+            interval.maximum - interval.minimum
+            for interval in self.sub_intervals
+            if interval.minimum != interval.maximum
+        )
 
     @property
     def sub_intervals(self: Self, /) -> Iterator[Self]:
