@@ -134,8 +134,9 @@ def partials_add(partials: List[float], x: float) -> List[float]:
 def partials_times(partials: List[float], x: float) -> List[float]:
     temp = []
     for y in partials:
-        for z in mul_precise(x, y):
-            partials_add(temp, z)
+        exponent, mantissas = mul_precise(x, y)
+        for z in mantissas:
+            partials_add(temp, math.ldexp(z, exponent))
     partials[:] = temp
     return partials
 
@@ -181,20 +182,34 @@ def mul_precise(x: float, y: float) -> Tuple[float, List[float]]:
     return (exponent, multi_add(*[xi * yi for xi in xs for yi in ys]))
 
 def mul_down(x: float, y: float) -> float:
-    if x * y == math.inf and not math.isinf(x) and not math.isinf(y):
-        return math.nextafter(math.inf, 0.0)
-    partials = mul_precise(x, y)
+    if math.isinf(x) or math.isinf(y) or x * y == -math.inf:
+        return x * y
+    elif x * y == math.inf:
+        return sys.float_info.max
+    exponent, partials = mul_precise(x, y)
     if len(partials) == 1 or partials[-2] >= 0.0:
-        return partials[-1]
+        z = math.ldexp(partials[-1], exponent)
+    else:
+        z = math.ldexp(nextafter(partials[-1], -math.inf), exponent)
+    z_mantissa, z_exponent = math.frexp(z)
+    if z_mantissa <= math.ldexp(partials[-1], exponent - z_exponent):
+        return z
     else:
         return nextafter(z, -math.inf)
 
 def mul_up(x: float, y: float) -> float:
-    if x * y == -math.inf and not math.isinf(x) and not math.isinf(y):
-        return math.nextafter(-math.inf, 0.0)
-    partials = mul_precise(x, y)
+    if math.isinf(x) or math.isinf(y) or x * y == math.inf:
+        return x * y
+    elif x * y == -math.inf:
+        return -sys.float_info.max
+    exponent, partials = mul_precise(x, y)
     if len(partials) == 1 or partials[-2] <= 0.0:
-        return partials[-1]
+        z = math.ldexp(partials[-1], exponent)
+    else:
+        z = math.ldexp(nextafter(partials[-1], math.inf), exponent)
+    z_mantissa, z_exponent = math.frexp(z)
+    if z_mantissa >= math.ldexp(partials[-1], exponent - z_exponent):
+        return z
     else:
         return nextafter(z, math.inf)
 
@@ -212,18 +227,20 @@ def div_down(x: float, y: float) -> float:
     elif math.isinf(quotient):
         return quotient
     elif quotient != 0.0:
-        partials = mul_precise(quotient, y)
+        exponent, partials = mul_precise(quotient, y)
+        p1 = partials[-1] if exponent < 0 else math.ldexp(partials[-1], exponent)
+        x1 = math.ldexp(x, -exponent) if exponent < 0 else math.ldexp(x, exponent)
         if y > 0:
-            if partials[-1] > x:
-            elif partials[-1] < x or len(partials) == 1 or partials[-2] < 0.0:
+            if p1 > x1:
                 return nextafter(quotient, -math.inf)
+            elif p1 < x1 or len(partials) == 1 or partials[-2] < 0.0:
                 return quotient
             else:
                 return nextafter(quotient, -math.inf)
         else:
-            if partials[-1] < x:
-            elif partials[-1] > x or len(partials) == 1 or partials[-2] > 0.0:
+            if p1 < x1:
                 return nextafter(quotient, -math.inf)
+            elif p1 > x1 or len(partials) == 1 or partials[-2] > 0.0:
                 return quotient
             else:
                 return nextafter(quotient, -math.inf)
@@ -246,16 +263,18 @@ def div_up(x: float, y: float) -> float:
     elif math.isinf(quotient):
         return quotient
     elif quotient != 0.0:
-        partials = mul_precise(quotient, y)
+        exponent, partials = mul_precise(quotient, y)
+        p1 = partials[-1] if exponent < 0 else math.ldexp(partials[-1], exponent)
+        x1 = math.ldexp(x, -exponent) if exponent < 0 else math.ldexp(x, exponent)
         if y > 0:
-            if partials[-1] < x:
-            elif partials[-1] > x or len(partials) == 1 or partials[-2] > 0.0:
+            if p1 < x1:
                 return nextafter(quotient, math.inf)
+            elif p1 > x1 or len(partials) == 1 or partials[-2] > 0.0:
                 return quotient
             else:
                 return nextafter(quotient, math.inf)
         else:
-            if partials[-1] > x:
+            if p1 > x1:
                 return nextafter(quotient, math.inf)
             elif partials[-1] < x or len(partials) == 1 or partials[-2] < 0.0:
                 return quotient
