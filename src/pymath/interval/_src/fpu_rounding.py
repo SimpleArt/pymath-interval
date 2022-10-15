@@ -15,6 +15,12 @@ def split_bits(n: int) -> Iterator[int]:
             yield -((n % (1 << 53)) << i)
             n >>= 53
 
+def split_precision(x: float) -> Tuple[float, float, float]:
+    x_mantissa, x_exponent = math.frexp(x)
+    sqrt_eps = math.sqrt(sys.float_info.epsilon)
+    x_small = math.remainder(x_mantissa, sqrt_eps)
+    x_large = x_mantissa - x_small
+    return (x_exponent, x_small, x_large)
 
 def float_split(x: SupportsRichFloat) -> tuple[float, float]:
     y = float(x)
@@ -112,23 +118,13 @@ def sub_down(x: float, y: float) -> float:
 def sub_up(x: float, y: float) -> float:
     return add_up(x, -y)
 
-def mul_precise(x: float, y: float) -> list[float]:
+def mul_precise(x: float, y: float) -> Tuple[float, List[float]]:
     if math.isinf(x) or math.isinf(y) or math.isnan(x) or math.isnan(y):
         return [x * y]
-    x_mantissa, x_exponent = math.frexp(x)
-    y_mantissa, y_exponent = math.frexp(y)
-    x_small = math.remainder(x_mantissa, math.ulp(x_mantissa) / math.sqrt(math.ulp(1.0)))
-    x_large = x_mantissa - x_small
-    y_small = math.remainder(y_mantissa, math.ulp(y_mantissa) / math.sqrt(math.ulp(1.0)))
-    y_large = y_mantissa - y_small
-    partials = [math.ldexp(x_large * y_large, x_exponent + y_exponent)]
-    for u in (
-        math.ldexp(x_large * y_small, x_exponent + y_exponent),
-        math.ldexp(x_small * y_large, x_exponent + y_exponent),
-        math.ldexp(x_small * y_small, x_exponent + y_exponent),
-    ):
-        partials_add(partials, u)
-    return partials
+    x_exponent, *xs = split_precision(x)
+    y_exponent, *ys = split_precision(y)
+    exponent = x_exponent + y_exponent
+    return (exponent, multi_add(*[xi * yi for xi in xs for yi in ys]))
 
 def mul_down(x: float, y: float) -> float:
     if x * y == math.inf and not math.isinf(x) and not math.isinf(y):
