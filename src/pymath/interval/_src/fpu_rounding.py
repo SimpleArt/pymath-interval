@@ -6,13 +6,15 @@ from .typing import SupportsRichFloat
 
 def split_bits(n: int) -> Iterator[int]:
     if n > 0:
-        while n != 0:
-            yield 1 << (n.bit_length() - 1)
-            n -= 1 << (n.bit_length() - 1)
+        for i in range(0, n.bit_length(), 53):
+            yield (n % (1 << 53)) << i
+            n >>= 53
     else:
-        while n != 0:
-            yield -(1 << (n.bit_length() - 1))
-            n += 1 << (n.bit_length() - 1)
+        n = -n
+        for i in range(0, n.bit_length(), 53):
+            yield -((n % (1 << 53)) << i)
+            n >>= 53
+
 
 def float_split(x: SupportsRichFloat) -> tuple[float, float]:
     y = float(x)
