@@ -1,6 +1,10 @@
 import sys
-from collections.abc import Callable, Iterator
 from typing import Optional
+
+if sys.version_info < (3, 9):
+    from typing import Callable, Iterator
+else:
+    from collections.abc import Callable, Iterator
 
 from ._src.interval import Interval
 from ._src import root_all as _root_all

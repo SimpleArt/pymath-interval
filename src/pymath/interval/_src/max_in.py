@@ -1,6 +1,12 @@
 import math
-from typing import Callable
+import sys
 
+if sys.version_info < (3, 9):
+    from typing import Callable
+else:
+    from collections.abc import Callable
+
+from .fpu_rounding import nextafter
 from .interval import Interval
 
 def bisection(
@@ -10,9 +16,9 @@ def bisection(
     abs_error: float = 0.0,
     rel_error: float = math.ulp(32),
 ) -> float:
-    abs_error = max(float(abs_error), math.nextafter(0.0, 1.0))
+    abs_error = max(float(abs_error), nextafter(0.0, 1.0))
     rel_error = max(float(rel_error), math.ulp(32))
-    xs = [*x[math.nextafter(-math.inf, 0.0) : math.nextafter(math.inf, 0.0)].sub_intervals]
+    xs = [*x[nextafter(-math.inf, 0.0) : nextafter(math.inf, 0.0)].sub_intervals]
     ys = [f(x) for x in xs]
     max_y_min = max(y.minimum for y in ys)
     xs = [x for x, y in zip(xs, ys) if y.maximum > max_y_min]

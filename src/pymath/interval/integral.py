@@ -1,8 +1,16 @@
+import sys
 from functools import lru_cache
-from math import fsum, inf, isinf, isnan, nextafter
-from typing import Callable, Iterator, List, Optional, SupportsFloat, Tuple
+from math import fsum, inf, isinf, isnan
+from typing import Optional, SupportsFloat
+
+if sys.version_info < (3, 9):
+    from typing import Callable, Iterator, List, Tuple
+else:
+    from builtins import list as List, tuple as Tuple
+    from collections.abc import Callable, Iterator
 
 from . import imath
+from ._src.fpu_rounding import nextafter
 from ._src.interval import Interval
 
 def _fmean(x: float, y: float) -> float:
