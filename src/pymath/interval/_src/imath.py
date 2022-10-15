@@ -977,41 +977,124 @@ def dist(p: Iterable[Union[Interval, RealLike]], q: Iterable[Union[Interval, Rea
             intervals.append((L, U))
     return sqrt(Interval(*intervals))
 
+def partials_add_exponent(
+    partials: List[Tuple[int, float]],
+    exponent: Optional[int] = None,
+    *mantissa: float,
+    others: Optional[List[Tuple[int, float]]] = None,
+) -> List[Tuple[int, float]]:
+    loop = ((exponent, mx) for mx in mantissa) if others is None else others
+    for me, mx in loop:
+        i = 0
+        for pe, px in partials:
+            if me < pe or abs(mx) < abs(px):
+                me, mx, pe, px = pe, px, me, mx
+            total = mx + math.ldexp(px, pe - me)
+            if math.isinf(total):
+                partials[:] = [(0, total)]
+                return partials
+            if total == mx:
+                px, normalization = math.frexp(px)
+                pe += normalization
+                partials[i] = (pe, px)
+                i += 1
+                mx, normalization = math.frexp(mx)
+                me += normalization
+                continue
+            error = math.ldexp(px, pe - me) - (total - mx)
+            if error != 0.0:
+                error, normalization = math.frexp(error)
+                partials[i] = (me + normalization, error)
+                i += 1
+            mx, normalization = math.frexp(total)
+            me += normalization
+        partials[i:] = [(me, mx)]
+        if len(partials) > 1 and mx == 0.0:
+            del partials[-1]
+    return partials
+
+pae = partials_add_exponent
+
+def partials_down(partials: List[Tuple[int, float]]) -> float:
+    z = math.ldexp(*partials[-1][::-1])
+    z_mantissa, z_exponent = math.frexp(z)
+    if z_mantissa > math.ldexp(partials[-1][1], partials[-1][0] - z_exponent):
+        return nextafter(z, -math.inf)
+    elif z_mantissa < math.ldexp(partials[-1][1], partials[-1][0] - z_exponent):
+        return z
+    elif len(partials) == 1 or partials[-2][1] >= 0.0:
+        return z
+    else:
+        return nextafter(z, -math.inf)
+
+def partials_up(partials: List[Tuple[int, float]]) -> float:
+    z = math.ldexp(*partials[-1][::-1])
+    z_mantissa, z_exponent = math.frexp(z)
+    if z_mantissa < math.ldexp(partials[-1][1], partials[-1][0] - z_exponent):
+        return nextafter(z, math.inf)
+    elif z_mantissa > math.ldexp(partials[-1][1], partials[-1][0] - z_exponent):
+        return z
+    elif len(partials) == 1 or partials[-2][1] <= 0.0:
+        return z
+    else:
+        return nextafter(z, math.inf)
+
 def dot(x: Iterable[Union[Interval, RealLike]], y: Iterable[Union[Interval, RealLike]]) -> Interval:
-    with localcontext() as ctx:
-        ctx.prec = 50
-        intervals = [([], [])]
-        for xi, yi in zip(x, y):
-            if isinstance(xi, get_args(RealLike)):
-                if isinstance(xi, SupportsIndex):
-                    xi = operator.index(xi)
-                xi = Interval(float_split(xi))
-            elif not isinstance(xi, Interval):
-                raise TypeError(NOT_INTERVAL.format(repr(xi)))
-            if isinstance(yi, get_args(RealLike)):
-                if isinstance(yi, SupportsIndex):
-                    yi = operator.index(yi)
-                yi = Interval(float_split(yi))
-            elif not isinstance(yi, Interval):
-                raise TypeError(NOT_INTERVAL.format(repr(yi)))
-            lower = []
-            upper = []
-            for xii in xi[:0].sub_intervals:
-                for yii in yi[:0].sub_intervals:
-                    lower.append(Decimal(xii.maximum) * Decimal(yii.maximum))
-                    upper.append(Decimal(xii.minimum) * Decimal(yii.minimum))
-                for yii in yi[0:].sub_intervals:
-                    lower.append(Decimal(xii.minimum) * Decimal(yii.maximum))
-                    upper.append(Decimal(xii.maximum) * Decimal(yii.minimum))
-            for xii in xi[0:].sub_intervals:
-                for yii in yi[:0].sub_intervals:
-                    lower.append(Decimal(xii.maximum) * Decimal(yii.minimum))
-                    upper.append(Decimal(xii.minimum) * Decimal(yii.maximum))
-                for yii in yi[0:].sub_intervals:
-                    lower.append(Decimal(xii.minimum) * Decimal(yii.minimum))
-                    upper.append(Decimal(xii.maximum) * Decimal(yii.maximum))
-            intervals[:] = [(i[0] + L, i[1] + U) for i in intervals for L, U in zip(lower, upper)]
-        return Interval(*intervals)
+    lower = []
+    upper = []
+    lowers = [[(0, 0.0)]]
+    uppers = [[(0, 0.0)]]
+    for xi, yi in zip(x, y):
+        if isinstance(xi, get_args(RealLike)):
+            if isinstance(xi, SupportsIndex):
+                xi = operator.index(xi)
+            xi = Interval(float_split(xi))
+        elif not isinstance(xi, Interval):
+            raise TypeError(NOT_INTERVAL.format(repr(xi)))
+        if isinstance(yi, get_args(RealLike)):
+            if isinstance(yi, SupportsIndex):
+                yi = operator.index(yi)
+            yi = Interval(float_split(yi))
+        elif not isinstance(yi, Interval):
+            raise TypeError(NOT_INTERVAL.format(repr(yi)))
+        for xii in xi[:0].sub_intervals:
+            for yii in yi[:0].sub_intervals:
+                me, mx = mul_precise(xii.maximum, yii.maximum)
+                lower.append(pae([], me, *mx))
+                me, mx = mul_precise(xii.minimum, yii.minimum)
+                upper.append(pae([], me, *mx))
+            for yii in yi[0:].sub_intervals:
+                me, mx = mul_precise(xii.minimum, yii.maximum)
+                lower.append(pae([], me, *mx))
+                me, mx = mul_precise(xii.maximum, yii.minimum)
+                upper.append(pae([], me, *mx))
+        for xii in xi[0:].sub_intervals:
+            for yii in yi[:0].sub_intervals:
+                me, mx = mul_precise(xii.maximum, yii.minimum)
+                lower.append(pae([], me, *mx))
+                me, mx = mul_precise(xii.minimum, yii.maximum)
+                upper.append(pae([], me, *mx))
+            for yii in yi[0:].sub_intervals:
+                me, mx = mul_precise(xii.minimum, yii.minimum)
+                lower.append(pae([], me, *mx))
+                me, mx = mul_precise(xii.maximum, yii.maximum)
+                upper.append(pae([], me, *mx))
+        lowers = [
+            pae(L1.copy(), others=L2)
+            for L1 in lower
+            for L2 in lowers
+        ]
+        lower.clear()
+        uppers = [
+            pae(U1.copy(), others=U2)
+            for U1 in upper
+            for U2 in uppers
+        ]
+        upper.clear()
+    return Interval(*[
+        (partials_down(L), partials_up(U))
+        for L, U in zip(lowers, uppers)
+    ])
 
 def erf_small_precise(x: float) -> Decimal:
     assert abs(x) <= 1.5
