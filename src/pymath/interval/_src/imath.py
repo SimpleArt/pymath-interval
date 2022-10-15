@@ -2,10 +2,17 @@ import decimal
 import itertools
 import math
 import operator
-from collections.abc import Iterable
+import sys
 from decimal import Decimal, localcontext
-from typing import Any, Optional, SupportsFloat, SupportsIndex, Type
-from typing import TypeVar, Union, get_args, overload
+from typing import Any, Optional, SupportsFloat, SupportsIndex, TypeVar
+from typing import Union, get_args, overload
+
+if sys.version_info < (3, 9):
+    from typing import Dict, Iterable, List, Tuple, Type
+else:
+    from builtins import dict as Dict, list as List, tuple as Tuple
+    from builtins import type as Type
+    from collections.abc import Iterable
 
 from .fpu_rounding import *
 from .interval import NOT_REAL, Interval, interval
@@ -14,10 +21,10 @@ from .typing import RealLike, SupportsRichFloat
 
 NOT_REAL = "could not interpret {} as an interval"
 
-e = interval[math.e:math.nextafter(math.e, math.inf)]
+e = interval[math.e:nextafter(math.e, math.inf)]
 inf = interval[math.inf:]
 
-_PI = interval[math.pi:math.nextafter(math.pi, math.inf)]
+_PI = interval[math.pi:nextafter(math.pi, math.inf)]
 _BIG_PI = Decimal(
     "3."
     "14159265358979323846264338327950288419716939937510582097494459230"
@@ -90,7 +97,7 @@ class PiMultiple(Interval):
         return self.coefficients * _PI
 
     @classmethod
-    def __dist__(cls: Type[Self], p: list[Interval], q: list[Interval]) -> Self:
+    def __dist__(cls: Type[Self], p: List[Interval], q: List[Interval]) -> Self:
         if not all(
             type(x).__dist__.__func__ is cls.__dist__.__func__
             for pq in (p, q)
@@ -121,7 +128,7 @@ class PiMultiple(Interval):
             return format(self.coefficients, specifier) + " * pi"
 
     @classmethod
-    def __fsum__(cls: Type[Self], intervals: list[Interval]) -> Self:
+    def __fsum__(cls: Type[Self], intervals: List[Interval]) -> Self:
         if not all(
             type(x).__fsum__.__func__ is cls.__fsum__.__func__
             for x in intervals
@@ -129,7 +136,7 @@ class PiMultiple(Interval):
             return NotImplemented
         return pi * fsum(x.coefficients for x in intervals)
 
-    def __getitem__(self: Self, args: Union[slice, tuple[slice, ...]]) -> Interval:
+    def __getitem__(self: Self, args: Union[slice, Tuple[slice, ...]]) -> Interval:
         return self.__as_interval__()[args]
 
     def __mul__(self: Self, other: Union[Interval, float]) -> Interval:
@@ -330,7 +337,7 @@ def sin_precise(x: Decimal) -> Decimal:
             s += sign * num / fact
         return s
 
-def cos_sin_precise(x: Union[Decimal, SupportsIndex, float]) -> tuple[Decimal, Decimal]:
+def cos_sin_precise(x: Union[Decimal, SupportsIndex, float]) -> Tuple[Decimal, Decimal]:
     with localcontext() as ctx:
         if isinstance(x, SupportsIndex):
             x = operator.index(x)
@@ -373,14 +380,14 @@ def acos(x: Union[Interval, RealLike]) -> Interval:
 def acos_down(x: float) -> float:
     y = math.acos(x)
     if cos_sin_precise(y)[0] < x:
-        return math.nextafter(y, 0.0)
+        return nextafter(y, 0.0)
     else:
         return y
 
 def acos_up(x: float) -> float:
     y = math.acos(x)
     if cos_sin_precise(y)[0] > x:
-        return math.nextafter(y, 4.0)
+        return nextafter(y, 4.0)
     else:
         return y
 
@@ -401,7 +408,7 @@ def acosh_down(x: float) -> float:
     y = math.acosh(x)
     d = Decimal(y)
     if (d.exp() + (-d).exp()) / 2 > x:
-        return math.nextafter(y, 0.0)
+        return nextafter(y, 0.0)
     else:
         return y
 
@@ -409,7 +416,7 @@ def acosh_up(x: float) -> float:
     y = math.acosh(x)
     d = Decimal(y)
     if (d.exp() + (-d).exp()) / 2 < x:
-        return math.nextafter(y, math.inf)
+        return nextafter(y, math.inf)
     else:
         return y
 
@@ -440,7 +447,7 @@ def asin(x: Union[Interval, RealLike]) -> Interval:
 def asin_down(x: float) -> float:
     y = math.asin(x)
     if cos_sin_precise(y)[1] > x:
-        return math.nextafter(y, -math.inf)
+        return nextafter(y, -math.inf)
     else:
         return y
 
@@ -448,7 +455,7 @@ def asin_up(x: float) -> float:
     y = math.asin(x)
     d = Decimal(y)
     if cos_sin_precise(y)[1] < x:
-        return math.nextafter(y, math.inf)
+        return nextafter(y, math.inf)
     else:
         return y
 
@@ -469,7 +476,7 @@ def asinh_down(x: float) -> float:
     y = math.asinh(x)
     d = Decimal(y)
     if (d.exp() - (-d).exp()) / 2 > x:
-        return math.nextafter(y, -math.inf)
+        return nextafter(y, -math.inf)
     else:
         return y
 
@@ -477,7 +484,7 @@ def asinh_up(x: float) -> float:
     y = math.asinh(x)
     d = Decimal(y)
     if (d.exp() - (-d).exp()) / 2 < x:
-        return math.nextafter(y, math.inf)
+        return nextafter(y, math.inf)
     else:
         return y
 
@@ -525,7 +532,7 @@ def atan_down(x: float) -> float:
     y = math.atan(x)
     c, s = cos_sin_precise(y)
     if s / c > x:
-        return math.nextafter(y, -math.inf)
+        return nextafter(y, -math.inf)
     else:
         return y
 
@@ -533,7 +540,7 @@ def atan_up(x: float) -> float:
     y = math.atan(x)
     c, s = cos_sin_precise(y)
     if s / c < x:
-        return math.nextafter(y, math.inf)
+        return nextafter(y, math.inf)
     else:
         return y
 
@@ -642,7 +649,7 @@ def atan2_down(y: float, x: float) -> float:
     z = math.atan2(y, x)
     c, s = cos_sin_precise(z)
     if s / c > Decimal(y) / Decimal(x):
-        return math.nextafter(z, -math.inf)
+        return nextafter(z, -math.inf)
     else:
         return z
 
@@ -650,7 +657,7 @@ def atan2_up(y: float, x: float) -> float:
     z = math.atan2(y, x)
     c, s = cos_sin_precise(z)
     if s / c < Decimal(y) / Decimal(x):
-        return math.nextafter(z, math.inf)
+        return nextafter(z, math.inf)
     else:
         return z
 
@@ -675,7 +682,7 @@ def atanh_down(x: float) -> float:
     else:
         t = (d.exp() - 1) / (d.exp() + 1)
     if t > x:
-        return math.nextafter(y, -math.inf)
+        return nextafter(y, -math.inf)
     else:
         return y
 
@@ -687,7 +694,7 @@ def atanh_up(x: float) -> float:
     else:
         t = (d.exp() - 1) / (d.exp() + 1)
     if t > x:
-        return math.nextafter(y, math.inf)
+        return nextafter(y, math.inf)
     else:
         return y
 
@@ -950,9 +957,9 @@ def dist(p: Iterable[Union[Interval, RealLike]], q: Iterable[Union[Interval, Rea
             if len(partials) == 1 or partials[-2] > 0:
                 L = float_down(partials[-1])
             else:
-                L = math.nextafter(float_up(partials[-1]), -math.inf)
+                L = nextafter(float_up(partials[-1]), -math.inf)
             if L > 0.0 and math.isinf(L):
-                L = math.nextafter(L, 0.0)
+                L = nextafter(L, 0.0)
             partials = multi_add(*[
                 float_up(max(
                     Decimal(sub_intervals[i].minimum) - Decimal(sub_intervals[~i].maximum),
@@ -964,9 +971,9 @@ def dist(p: Iterable[Union[Interval, RealLike]], q: Iterable[Union[Interval, Rea
             if len(partials) == 1 or partials[-2] < 0:
                 U = float_up(partials[-1])
             else:
-                U = math.nextafter(float_down(partials[-1]), math.inf)
+                U = nextafter(float_down(partials[-1]), math.inf)
             if U < 0.0 and math.isinf(U):
-                U = math.nextafter(U, 0.0)
+                U = nextafter(U, 0.0)
             intervals.append((L, U))
     return sqrt(Interval(*intervals))
 
@@ -1064,7 +1071,7 @@ def erf_down(x: float) -> float:
     elif math.isinf(x):
         return 1.0
     else:
-        return math.nextafter(1.0, 0.0)
+        return nextafter(1.0, 0.0)
 
 def erf_up(x: float) -> float:
     if abs(x) <= 1.5:
@@ -1078,7 +1085,7 @@ def erf_up(x: float) -> float:
     elif math.isinf(x):
         return -1.0
     else:
-        return math.nextafter(-1.0, 0.0)
+        return nextafter(-1.0, 0.0)
 
 def erfc(x: Union[Interval, RealLike]) -> Interval:
     if isinstance(x, get_args(RealLike)):
@@ -1105,7 +1112,7 @@ def erfc_down(x: float) -> float:
     elif math.isinf(x):
         return 2.0
     else:
-        return math.nextafter(2.0, 0.0)
+        return nextafter(2.0, 0.0)
 
 def erfc_up(x: float) -> float:
     if abs(x) <= 1.5:
@@ -1119,19 +1126,19 @@ def erfc_up(x: float) -> float:
     elif math.isinf(x):
         return 0.0
     else:
-        return math.nextafter(0.0, 1.0)
+        return nextafter(0.0, 1.0)
 
 def exp(x: Union[Interval, RealLike]) -> Interval:
     if isinstance(x, Decimal):
         try:
             return Interval(float_split(x.exp()))
         except decimal.Overflow:
-            return Interval((math.nextafter(math.inf, 0.0), math.inf))
+            return Interval((nextafter(math.inf, 0.0), math.inf))
     elif isinstance(x, SupportsIndex):
         try:
             return Interval(float_split(Decimal(operator.index(x)).exp()))
         except decimal.Overflow:
-            return Interval((math.nextafter(math.inf, 0.0), math.inf))
+            return Interval((nextafter(math.inf, 0.0), math.inf))
     elif isinstance(x, get_args(RealLike)):
         x = Interval(float_split(x))
     elif not isinstance(x, Interval):
@@ -1146,7 +1153,7 @@ def exp_down(x: float) -> float:
     try:
         return float_down(Decimal(x).exp())
     except decimal.Overflow:
-        return math.nextafter(math.inf, x)
+        return nextafter(math.inf, x)
 
 def exp_up(x: float) -> float:
     try:
@@ -1156,7 +1163,7 @@ def exp_up(x: float) -> float:
     if result != 0.0 or math.isinf(x):
         return result
     else:
-        return math.nextafter(0.0, 1.0)
+        return nextafter(0.0, 1.0)
 
 def expm1_precise(x: float) -> Decimal:
     with localcontext() as ctx:
@@ -1178,12 +1185,12 @@ def expm1(x: Union[Interval, RealLike]) -> Interval:
         try:
             return Interval(float_split(x.exp() - 1))
         except decimal.Overflow:
-            return Interval((math.nextafter(math.inf, 0.0), math.inf))
+            return Interval((nextafter(math.inf, 0.0), math.inf))
     elif isinstance(x, SupportsIndex):
         try:
             return Interval(float_split(Decimal(operator.index(x)).exp() - 1))
         except decimal.Overflow:
-            return Interval((math.nextafter(math.inf, 0.0), math.inf))
+            return Interval((nextafter(math.inf, 0.0), math.inf))
     elif isinstance(x, get_args(RealLike)):
         x = Interval(float_split(x))
     else:
@@ -1198,7 +1205,7 @@ def expm1_down(x: float) -> float:
     try:
         return float_down(expm1_precise(x))
     except decimal.Overflow:
-        return math.nextafter(math.inf, x)
+        return nextafter(math.inf, x)
 
 def expm1_up(x: float) -> float:
     try:
@@ -1208,7 +1215,7 @@ def expm1_up(x: float) -> float:
     if result != -1.0 or math.isinf(x):
         return result
     else:
-        return math.nextafter(-1.0, 0.0)
+        return nextafter(-1.0, 0.0)
 
 def fsum(intervals: Iterable[Union[Interval, RealLike]]) -> Interval:
     temp = []
@@ -1239,9 +1246,9 @@ def fsum(intervals: Iterable[Union[Interval, RealLike]]) -> Interval:
             if len(partials) == 1 or partials[-2] > 0:
                 L = float_down(partials[-1])
             else:
-                L = math.nextafter(float_up(partials[-1]), -math.inf)
+                L = nextafter(float_up(partials[-1]), -math.inf)
             if L > 0.0 and math.isinf(L):
-                L = math.nextafter(L, 0.0)
+                L = nextafter(L, 0.0)
             partials = multi_add(*[
                 sub_interval.maximum
                 for sub_interval in sub_intervals
@@ -1249,9 +1256,9 @@ def fsum(intervals: Iterable[Union[Interval, RealLike]]) -> Interval:
             if len(partials) == 1 or partials[-2] < 0:
                 U = float_up(partials[-1])
             else:
-                U = math.nextafter(float_down(partials[-1]), math.inf)
+                U = nextafter(float_down(partials[-1]), math.inf)
             if U < 0.0 and math.isinf(U):
-                U = math.nextafter(U, 0.0)
+                U = nextafter(U, 0.0)
             results.append((L, U))
     return Interval(*results)
 
@@ -1262,9 +1269,9 @@ LGAMMA_POS_MIN_Y = Decimal(
     "-0.1214862905358496080955145571"
 )
 
-DIGAMMA_ROOTS_CACHE: dict[int, tuple[float, float]] = {}
+DIGAMMA_ROOTS_CACHE: Dict[int, Tuple[float, float]] = {}
 
-def digamma_root(n: int) -> tuple[float, float]:
+def digamma_root(n: int) -> Tuple[float, float]:
     if n not in DIGAMMA_ROOTS_CACHE:
         L = 0.0
         U = 0.5
@@ -1284,7 +1291,7 @@ def digamma_root(n: int) -> tuple[float, float]:
         DIGAMMA_ROOTS_CACHE[n] = (L, U)
     return DIGAMMA_ROOTS_CACHE[n]
 
-LGAMMA_MINS_CACHE: dict[int, Decimal] = {}
+LGAMMA_MINS_CACHE: Dict[int, Decimal] = {}
 
 def lgamma_min(n: int) -> float:
     if n not in LGAMMA_MINS_CACHE:
@@ -1385,7 +1392,7 @@ def lgamma_down(x: float) -> float:
         return math.inf
     y = float_down(lgamma_precise(x))
     if 0 < x < math.inf and math.isinf(y):
-        return math.nextafter(y, 0.0)
+        return nextafter(y, 0.0)
     else:
         return y
 
@@ -1418,7 +1425,7 @@ def gamma(x: Union[Interval, RealLike]) -> Interval:
         if x <= 0:
             return Interval((-math.inf, -math.inf), (math.inf, math.inf))
         elif x >= 179:
-            return Interval((math.nextafter(math.inf, 0.0), math.inf))
+            return Interval((nextafter(math.inf, 0.0), math.inf))
         else:
             return Interval(float_split(gamma_precise(float(x))))
     elif isinstance(x, SupportsRichFloat):
@@ -1528,7 +1535,7 @@ def gamma(x: Union[Interval, RealLike]) -> Interval:
 def gamma_down(x: float) -> float:
     y = float_down(gamma_precise(x))
     if 0 < x < math.inf and math.isinf(y):
-        return math.nextafter(y, 0.0)
+        return nextafter(y, 0.0)
     else:
         return y
 
@@ -1914,21 +1921,21 @@ def sqrt_down(x: float) -> float:
     y = math.sqrt(x)
     partials = mul_precise(y, y)
     if partials[-1] > x:
-        return math.nextafter(y, 0.0)
+        return nextafter(y, 0.0)
     elif partials[-1] < x or len(partials) == 1 or partials[-2] < 0.0:
         return y
     else:
-        return math.nextafter(y, 0.0)
+        return nextafter(y, 0.0)
 
 def sqrt_up(x: float) -> float:
     y = math.sqrt(x)
     partials = mul_precise(y, y)
     if partials[-1] < x:
-        return math.nextafter(y, math.inf)
+        return nextafter(y, math.inf)
     elif partials[-1] > x or len(partials) == 1 or partials[-2] > 0.0:
         return y
     else:
-        return math.nextafter(y, math.inf)
+        return nextafter(y, math.inf)
 
 def tan(x: Union[Interval, RealLike]) -> Interval:
     if isinstance(x, (Decimal, SupportsIndex)):
