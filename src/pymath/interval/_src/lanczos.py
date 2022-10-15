@@ -4,9 +4,14 @@ https://github.com/siemens/vanilc/blob/master/3rdParty/boost/math/special_functi
 """
 import decimal
 import math
-from collections.abc import Reversible
+import sys
 from decimal import Decimal, localcontext
 from typing import Union
+
+if sys.version_info < (3, 9):
+    from typing import Reversible
+else:
+    from collections.abc import Reversible
 
 G = Decimal("10.90051099999999983936049829935654997826")
 
@@ -282,4 +287,3 @@ def lgamma_precise(x: float) -> Decimal:
                 - result
             )
         return result
-

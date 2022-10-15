@@ -1,12 +1,19 @@
 from __future__ import annotations
 import operator
 import re
+import sys
 from decimal import Decimal
 from heapq import merge
 from math import ceil, floor, inf, isinf, isnan
-from typing import Any, Iterable, Iterator, Optional, Protocol
-from typing import SupportsFloat, SupportsIndex, TypeVar, Union
-from typing import get_args, overload, Tuple as tuple
+from typing import Any, Optional, Protocol, SupportsFloat
+from typing import SupportsIndex, TypeVar, Union, get_args, overload
+
+if sys.version_info < (3, 9):
+    from typing import Iterator, Pattern, Tuple, Type
+else:
+    from builtins import tuple as Tuple, type as Type
+    from collections.abc import Iterator
+    from re import Pattern
 
 from . import fpu_rounding as fpur
 from .typing import RealLike, SupportsRichFloat
@@ -18,7 +25,7 @@ SupportsSelf = TypeVar("SupportsSelf", bound="SupportsInterval")
 
 NOT_REAL = "could not interpret {} as a real value"
 
-FSTRING_FORMATTER = re.compile(
+FSTRING_FORMATTER: Pattern = re.compile(
     "(?P<fill>.*?)"
     "(?P<align>[<>=^]?)"
     "(?P<sign>[+ -]?)"
@@ -45,7 +52,7 @@ class Interval:
 
     __slots__ = ("_endpoints",)
 
-    def __init__(self: Self, /, *args: tuple[RealLike, RealLike]) -> None:
+    def __init__(self: Self, /, *args: Tuple[RealLike, RealLike]) -> None:
         for arg in args:
             if not isinstance(arg, tuple):
                 raise TypeError(f"interval(...) expects tuples for arguments, got {arg!r}")
@@ -169,7 +176,7 @@ class Interval:
         )
 
     @classmethod
-    def __dist__(cls: Type[Self], p: list[Interval], q: list[Interval]) -> Self:
+    def __dist__(cls: Type[Self], p: List[Interval], q: List[Interval]) -> Self:
         return NotImplemented
 
     def __eq__(self: Self, other: Any, /) -> bool:
@@ -212,10 +219,10 @@ class Interval:
         return f"interval[{bounds}]"
 
     @classmethod
-    def __fsum__(cls: Type[Self], intervals: list[Interval]) -> Self:
+    def __fsum__(cls: Type[Self], intervals: List[Interval]) -> Self:
         return NotImplemented
 
-    def __getitem__(self: Self, args: Union[slice, tuple[slice, ...]], /) -> Interval:
+    def __getitem__(self: Self, args: Union[slice, Tuple[slice, ...]], /) -> Interval:
         if isinstance(args, slice):
             args = (args,)
         elif not isinstance(args, tuple):

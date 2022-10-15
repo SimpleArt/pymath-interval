@@ -1,14 +1,36 @@
 import math
-from collections.abc import Callable, Iterator
+import sys
 from itertools import chain
 from math import exp, log, sqrt
-from typing import Iterable, Iterator, Literal, Optional, TypeVar
+from typing import Literal, Optional, TypeVar
 
+if sys.version_info < (3, 9):
+    from typing import Callable, Iterator, Tuple
+else:
+    from builtins import tuple as Tuple
+    from collections.abc import Callable, Iterator
+
+T = TypeVar("T")
+
+if sys.version_info < (3, 10):
+    if sys.version_info < (3, 9):
+        from typing import Iterable
+    else:
+        from collections.abc import Iterable
+    def pairwise(iterable: Iterable[T]) -> Iterator[Tuple[T, T]]:
+        """Generates consecutive pairs of elements."""
+        iterator = iter(iterable)
+        x = next(iterator, None)
+        for y in iterator:
+            yield (x, y)
+            x = y
+else:
+    from itertools import pairwise
+
+from .fpu_rounding import nextafter
 from .interval import Interval
 
 __all__ = ["bisect", "newton"]
-
-T = TypeVar("T")
 
 def is_between(lo: float, x: float, hi: float, /) -> bool:
     """Checks if `x` is between the `lo` and `hi` arguments."""
@@ -17,14 +39,6 @@ def is_between(lo: float, x: float, hi: float, /) -> bool:
 def mean(x1: float, x2: float, /) -> float:
     """Returns the arithmetic mean of x1 and x2 without overflowing."""
     return x1 + 0.5 * (x2 - x1) if sign(x1) == sign(x2) else 0.5 * (x1 + x2)
-
-def pairwise(iterable: Iterable[T]) -> Iterator[tuple[T, T]]:
-    """Generates consecutive pairs of elements."""
-    iterator = iter(iterable)
-    x = next(iterator, None)
-    for y in iterator:
-        yield (x, y)
-        x = y
 
 def sign(x: float) -> Literal[-1, 0, 1]:
     """Returns the sign of a real number: -1, 0, or 1."""
@@ -40,10 +54,10 @@ def bisect(
     rel_tol: float,
     /,
 ) -> Iterator[Interval]:
-    if 0 in f(interval[:math.nextafter(-math.inf, 0.0)]):
-        yield interval[:math.nextafter(-math.inf, 0.0)]
-    leftover = interval[math.nextafter(math.inf, 0.0):]
-    interval = interval[math.nextafter(-math.inf, 0.0):math.nextafter(math.inf, 0.0)]
+    if 0 in f(interval[:nextafter(-math.inf, 0.0)]):
+        yield interval[:nextafter(-math.inf, 0.0)]
+    leftover = interval[nextafter(math.inf, 0.0):]
+    interval = interval[nextafter(-math.inf, 0.0):nextafter(math.inf, 0.0)]
     if x is None:
         intervals = [*interval.sub_intervals]
     else:
@@ -169,10 +183,10 @@ def newton(
     rel_tol: float,
     /,
 ) -> Iterator[Interval]:
-    if 0 in f(interval[:math.nextafter(-math.inf, 0.0)]):
-        yield interval[:math.nextafter(-math.inf, 0.0)]
-    leftover = interval[math.nextafter(math.inf, 0.0):]
-    interval = interval[math.nextafter(-math.inf, 0.0):math.nextafter(math.inf, 0.0)]
+    if 0 in f(interval[:nextafter(-math.inf, 0.0)]):
+        yield interval[:nextafter(-math.inf, 0.0)]
+    leftover = interval[nextafter(math.inf, 0.0):]
+    interval = interval[nextafter(-math.inf, 0.0):nextafter(math.inf, 0.0)]
     if x is None:
         intervals = [*interval.sub_intervals]
     else:
