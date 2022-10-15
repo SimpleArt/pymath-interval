@@ -1,6 +1,60 @@
+import ctypes
 import math
+import sys
 from decimal import Decimal
-from typing import Iterator
+from typing import SupportsFloat
+
+if sys.version_info < (3, 9):
+    from typing import Callable, Iterator, List, Tuple
+else:
+    from builtins import list as List, tuple as Tuple
+    from collections.abc import Callable, Iterator
+
+SUBNORMAL = math.ldexp(1.0, -1022)
+NEAR_ZERO = math.ldexp(1.0, -1074)
+
+nextafter: Callable[[float, float], float]
+
+try:
+    if sys.version_info >= (3, 9):
+        from math import nextafter
+    elif sys.platform == "linux" or sys.platform == "linux2":
+        nextafter = ctypes.cdll.LoadLibrary("libm.so.6").nextafter
+        nextafter.restype = ctypes.c_double
+        nextafter.argtypes = [ctypes.c_double, ctype.c_double]
+    elif sys.platform == "darwin":
+        nextafter = ctypes.cdll.LoadLibrary("libSystem.dylib").nextafter
+        nextafter.restype = ctypes.c_double
+        nextafter.argtypes = [ctypes.c_double, ctype.c_double]
+    elif sys.platform == "win32":
+        nextafter = ctypes.cdll.LoadLibrary("libSystem.dylib")._nextafter
+        nextafter.restype = ctypes.c_double
+        nextafter.argtypes = [ctypes.c_double, ctype.c_double]
+    else:
+        from math import nextafter
+except:
+    def nextafter(x: float, y: float) -> float:
+        if isinstance(x, SupportsFloat):
+            x = float(x)
+        if isinstance(y, SupportsFloat):
+            y = float(y)
+        if x == y:
+            return x
+        elif math.isnan(x) or math.isnan(y):
+            return x + y
+        elif math.isinf(x):
+            return x
+        elif -SUBNORMAL < x < SUBNORMAL:
+            if x < y:
+                return x - NEAR_ZERO
+            else:
+                return x + NEAR_ZERO
+        mantissa, exponent = math.frexp(x)
+        if x < y:
+            mantissa += 0.5 * sys.float_info.epsilon
+        else:
+            mantissa -= 0.5 * sys.float_info.epsilon
+        return math.ldexp(mantissa, exponent)
 
 from .typing import SupportsRichFloat
 
