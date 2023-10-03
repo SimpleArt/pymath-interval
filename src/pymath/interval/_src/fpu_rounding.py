@@ -229,7 +229,7 @@ def div_down(x: float, y: float) -> float:
     elif quotient != 0.0:
         exponent, partials = mul_precise(quotient, y)
         p1 = partials[-1] if exponent < 0 else math.ldexp(partials[-1], exponent)
-        x1 = math.ldexp(x, -exponent) if exponent < 0 else math.ldexp(x, exponent)
+        x1 = math.ldexp(x, -exponent) if exponent < 0 else x
         if y > 0:
             if p1 > x1:
                 return nextafter(quotient, -math.inf)
@@ -265,7 +265,7 @@ def div_up(x: float, y: float) -> float:
     elif quotient != 0.0:
         exponent, partials = mul_precise(quotient, y)
         p1 = partials[-1] if exponent < 0 else math.ldexp(partials[-1], exponent)
-        x1 = math.ldexp(x, -exponent) if exponent < 0 else math.ldexp(x, exponent)
+        x1 = math.ldexp(x, -exponent) if exponent < 0 else x
         if y > 0:
             if p1 < x1:
                 return nextafter(quotient, math.inf)
